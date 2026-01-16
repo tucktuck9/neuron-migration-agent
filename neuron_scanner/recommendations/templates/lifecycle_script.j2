@@ -1,0 +1,84 @@
+{# Lifecycle Script for SageMaker Notebook Instance Neuron Compilation #}
+{# ===================================================================== #}
+{#
+ARCHITECTURE:
+    This script runs on SageMaker Notebook Instance startup via lifecycle configuration.
+    It downloads the model, runs Neuron compilation in a Docker container, and uploads results.
+
+VARIABLES:
+    model_s3_uri: S3 URI to the model.tar.gz file
+    output_s3_uri: S3 URI prefix for output (result.json, compiled_model.pt)
+    script_s3_uri: S3 URI to the compile_script.py
+    input_shape_str: Comma-separated input shape (e.g., "1,512") or empty for auto-detect
+    region: AWS region for ECR login
+    container_registry: ECR registry URL (e.g., 763104351884.dkr.ecr.us-east-1.amazonaws.com)
+    container_image: Full Neuron DLC image URI
+#}
+#!/bin/bash
+set -e
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+export MODEL_S3_URI="{{ model_s3_uri }}"
+export OUTPUT_S3_URI="{{ output_s3_uri }}"
+export SCRIPT_S3_URI="{{ script_s3_uri }}"
+export INPUT_SHAPE="{{ input_shape_str }}"
+
+# =============================================================================
+# Logging
+# =============================================================================
+echo "Starting Neuron compilation lifecycle script..."
+echo "MODEL_S3_URI: $MODEL_S3_URI"
+echo "OUTPUT_S3_URI: $OUTPUT_S3_URI"
+
+# =============================================================================
+# Setup Working Directories
+# =============================================================================
+mkdir -p /tmp/neuron-compile/model
+mkdir -p /tmp/neuron-compile/output
+chmod -R 777 /tmp/neuron-compile  # Ensure Docker has write access
+
+# =============================================================================
+# Download Model and Compile Script
+# =============================================================================
+aws s3 cp "$MODEL_S3_URI" /tmp/neuron-compile/model.tar.gz
+
+cd /tmp/neuron-compile/model
+tar -xzf ../model.tar.gz
+
+aws s3 cp "$SCRIPT_S3_URI" /tmp/neuron-compile/compile_script.py
+
+# =============================================================================
+# Run Compilation in Docker (AWS Neuron DLC)
+# =============================================================================
+echo "Logging into ECR to pull Neuron DLC..."
+aws ecr get-login-password --region {{ region }} | docker login --username AWS --password-stdin {{ container_registry }}
+
+echo "Pulling Neuron DLC image: {{ container_image }}..."
+docker pull {{ container_image }}
+
+echo "Running compilation inside Docker..."
+# We map /tmp/neuron-compile (host) to /app (container)
+# We install transformers/safetensors just in case the DLC version is old
+docker run --rm \
+    -v /tmp/neuron-compile:/app \
+    -e INPUT_SHAPE="$INPUT_SHAPE" \
+    {{ container_image }} \
+    /bin/bash -c "pip install --upgrade transformers safetensors && cd /app && python3 compile_script.py --input-dir /app/model --output-dir /app/output" || {
+    echo "ERROR: Docker compilation failed"
+    # Create an error result so the validator knows it failed
+    echo '{"status": "ERROR", "error": "Docker compilation failed. Check CloudWatch logs for details."}' > /tmp/neuron-compile/output/result.json
+    aws s3 cp /tmp/neuron-compile/output/result.json "$OUTPUT_S3_URI/result.json"
+    exit 1
+}
+
+# =============================================================================
+# Upload Results
+# =============================================================================
+aws s3 cp /tmp/neuron-compile/output/result.json "$OUTPUT_S3_URI/result.json"
+if [ -f /tmp/neuron-compile/output/compiled_model.pt ]; then
+    aws s3 cp /tmp/neuron-compile/output/compiled_model.pt "$OUTPUT_S3_URI/compiled_model.pt"
+fi
+
+echo "Compilation complete!"

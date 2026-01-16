@@ -1,0 +1,74 @@
+{# Service Messages Template for Model Validation Service #}
+{# ======================================================= #}
+{#
+ARCHITECTURE:
+    User-facing messages for the ModelValidationService.
+    Centralizes all formatted output for easy modification by domain experts.
+
+SECTIONS:
+    1. Deprecated Model Lookup
+    2. Job Status Messages (pending, running, failed, not found, unknown)
+#}
+
+{# =============================================================================
+   Deprecated Model Lookup
+   ============================================================================= #}
+
+{% macro deprecated_model_lookup(model_name) %}
+### Model Support Lookup: {{ model_name }}
+
+Static model lookup has been deprecated in favor of the official documentation.
+
+Please check the **Hugging Face Optimum Neuron Supported Models** list to see if your architecture is supported:
+👉 [https://huggingface.co/docs/optimum-neuron/package_reference/supported_models](https://huggingface.co/docs/optimum-neuron/package_reference/supported_models)
+
+For ground-truth validation, use the S3-based SageMaker validator:
+```bash
+neuron-scanner validate-model s3://your-bucket/model.tar.gz
+```
+{% endmacro %}
+
+{# =============================================================================
+   Job Status Messages
+   ============================================================================= #}
+
+{% macro job_not_found(job_id) %}
+❌ Job not found: {{ job_id }}
+{% endmacro %}
+
+{% macro job_pending(job_id, s3_uri) %}
+⏳ **Job Queued**: {{ job_id }}
+
+Status: Waiting to start...
+S3 URI: `{{ s3_uri }}`
+{% endmacro %}
+
+{% macro job_running(job_id, s3_uri, elapsed) %}
+🔄 **Validation In Progress**: {{ job_id }}
+
+Status: Running ({{ elapsed }} elapsed)
+S3 URI: `{{ s3_uri }}`
+
+SageMaker Notebook Instance validation typically takes 5-15 minutes.
+Check again in a few minutes with: `check_validation_status("{{ job_id }}")`
+{% endmacro %}
+
+{% macro job_failed(job_id, s3_uri, error, elapsed) %}
+❌ **Validation Failed**: {{ job_id }}
+
+Error: {{ error }}
+S3 URI: `{{ s3_uri }}`
+Duration: {{ elapsed }}
+{% endmacro %}
+
+{% macro job_unknown_status(job_id) %}
+Unknown status for job: {{ job_id }}
+{% endmacro %}
+
+{# =============================================================================
+   Error Messages
+   ============================================================================= #}
+
+{% macro validation_error(error_message) %}
+Error in SageMaker validation: {{ error_message }}
+{% endmacro %}

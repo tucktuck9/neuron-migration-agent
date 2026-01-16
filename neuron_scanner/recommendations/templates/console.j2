@@ -1,0 +1,35 @@
+{# Console Output Template for SageMaker Validator #}
+
+{% if section == 'start_validation' %}
+[bold cyan]🚀 Starting SageMaker Notebook Instance validation[/]
+   Job name: {{ job_name }}
+   Model URI: {{ model_uri }}
+   Instance type: [bold]{{ instance_type }}[/bold]
+   Target: {{ target_device }}
+   Input shape: {% if input_shape %}{{ input_shape }} (override){% else %}[dim]auto-detect from config.json[/dim]{% endif %}
+
+[yellow]⏳ This typically takes 5-10 minutes:[/yellow]
+   1. Creating notebook instance (~2-3 min)
+   2. Running compilation (~2-5 min)
+   3. Uploading results and cleanup (~1 min)
+{% elif section == 'lifecycle_config' %}
+[dim]📝 Creating lifecycle configuration...[/dim]
+{% elif section == 'create_notebook' %}
+[dim]🖥️  Creating notebook instance ({{ instance_type }})...[/dim]
+{% elif section == 'wait_start' %}
+[yellow]⏳ Waiting for notebook instance to start (this takes 2-4 minutes)...[/yellow]
+{% elif section == 'notebook_ready' %}
+[green]✅ Notebook ready ({{ elapsed }}s)[/green]
+{% elif section == 'status_spinner' %}
+[dim]{{ spinner }} Status: {{ status }} ({{ elapsed }}s elapsed)[/dim]
+{% elif section == 'wait_results' %}
+[yellow]🔄 Notebook running, waiting for compilation results...[/yellow]
+{% elif section == 'compilation_complete' %}
+{% if status == 'COMPATIBLE' %}
+[green]✅ Compilation complete: {{ status }}[/green]
+{% else %}
+[red]❌ Compilation complete: {{ status }}[/red]
+{% endif %}
+{% elif section == 'compilation_spinner' %}
+[dim]{{ spinner }} Compilation in progress... ({{ elapsed }}s elapsed)[/dim]
+{% endif %}

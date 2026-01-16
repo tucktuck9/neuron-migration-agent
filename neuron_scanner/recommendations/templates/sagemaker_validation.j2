@@ -1,0 +1,90 @@
+{# SageMaker Notebook Instance Neuron Validation Templates #}
+{# ======================================================= #}
+
+{# Main section wrapper #}
+{% macro validation_section(mode_notice, results, summary) %}
+## 🧪 SageMaker Notebook Instance Neuron Validation
+
+{{ mode_notice }}
+
+{{ results }}
+
+{{ summary }}
+{% endmacro %}
+
+{# Mode notices #}
+{% macro mode_configured() %}
+✅ **Ground-truth validation via SageMaker Notebook Instance**
+
+> Results below are from real Neuron compilation on AWS infrastructure (ml.inf2/ml.trn1).
+> Models marked COMPATIBLE will compile successfully on Neuron hardware.
+{% endmacro %}
+
+{% macro mode_not_configured() %}
+⚠️ **SageMaker validation not configured**
+
+> Set environment variables to enable:
+> ```bash
+> export NEURON_VALIDATION_BUCKET=my-bucket
+> export NEURON_VALIDATION_ROLE_ARN=arn:aws:iam::123456789012:role/SageMakerRole
+> ```
+{% endmacro %}
+
+{# Result templates #}
+{% macro result_compatible(model_name, file_path, compilation_time=None, detected_shape=None, detected_type=None) %}
+### ✅ `{{ model_name }}` - COMPATIBLE
+
+- **File**: `{{ file_path }}`
+- **Compilation**: Successfully compiled via torch_neuronx.trace()
+{% if detected_shape %}- **Detected Input Shape**: {{ detected_shape }}{% endif %}
+{% if detected_type %}- **Model Type**: {{ detected_type }}{% endif %}
+{% if compilation_time %}- **Compilation Time**: {{ "%.1f"|format(compilation_time) }}s{% endif %}
+{% endmacro %}
+
+{% macro result_incompatible(model_name, file_path, error_details, detected_shape=None, detected_type=None) %}
+### ❌ `{{ model_name }}` - INCOMPATIBLE
+
+- **File**: `{{ file_path }}`
+- **Error**: {{ error_details }}
+{% if detected_shape %}- **Detected Input Shape**: {{ detected_shape }}{% endif %}
+{% if detected_type %}- **Model Type**: {{ detected_type }}{% endif %}
+{% endmacro %}
+
+{% macro result_skipped(model_name, file_path, message) %}
+### ⚠️ `{{ model_name }}` - SKIPPED
+
+- **File**: `{{ file_path }}`
+- **Reason**: {{ message }}
+{% endmacro %}
+
+{# Recommendation messages based on validation counts #}
+{% macro recommendation_message(compatible, incompatible) %}
+{% if incompatible > 0 %}
+🔴 **Action Required**: Fix incompatible models before deploying to Neuron instances.
+{% elif compatible > 0 %}
+✅ **All validated models are Neuron-compatible!**
+{% else %}
+⚠️ No models could be validated. Check for missing dependencies or constructor arguments.
+{% endif %}
+{% endmacro %}
+
+{# Summary template #}
+{% macro summary(compatible, incompatible, skipped, recommendation) %}
+---
+
+**Summary**: {{ compatible }} compatible, {{ incompatible }} incompatible, {{ skipped }} skipped
+
+{{ recommendation }}
+{% endmacro %}
+
+{# No models found template #}
+{% macro no_models_found() %}
+### ⚠️ No Custom Models Found
+
+No `nn.Module` subclasses were discovered in the specified path.
+
+**Tips**:
+- Ensure your model classes inherit from `torch.nn.Module`
+- Check that Python files are valid and parseable
+- Try specifying a file directly: `--path ./model.py`
+{% endmacro %}

@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuron-scanner"
+version = "0.1.0"
+description = "Intelligent CUDA-to-Neuron migration scanner for ML workloads"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "AWS Neuron Team", email = "neuron-scanner@amazon.com" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# Core dependencies (PyPI)
+dependencies = [
+  "click>=8.3.1",
+  "rich>=14.2.0",
+  "pydantic>=2.12.5",
+  "pydantic-settings>=2.10.1",
+  "pathlib2>=2.3.7.post1",
+  "astroid>=4.0.2",
+  "pyyaml>=6.0.3",
+  "jinja2>=3.1.0",
+  "kubernetes-validate>=1.34.1",
+  "ruamel.yaml>=0.19.1",
+  "httpx>=0.28.1",
+  "beautifulsoup4>=4.14.3",
+  "markdownify>=1.2.2",
+  "transformers>=4.57.3",
+  "torch>=2.9.1",
+  "sentence-transformers>=5.2.0",
+  "scikit-learn>=1.8.0",
+  "langgraph>=1.0.5",
+  "langchain>=1.2.0",
+  "langchain-core>=1.2.5",
+  "langchain-huggingface>=1.2.0",
+  "langchain-community>=0.4.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/aws-samples/neuron-migrator"
+
+[project.scripts]
+neuron-scanner = "neuron_scanner.cli:main"
+
+[project.optional-dependencies]
+# SageMaker - For validate-model with S3 URIs (works from any laptop!)
+sagemaker = [
+  "boto3>=1.42.26",
+  "sagemaker>=2.200.0",
+]
+
+# Development dependencies
+dev = [
+  "pytest>=7.0.0",
+  "pytest-cov>=4.0.0",
+  "black>=22.0.0",
+  "isort>=5.10.0",
+  "mypy>=1.0.0",
+  "flake8>=4.0.0",
+]
+
+# MCP support
+mcp = ["mcp>=1.0.0"]
+
+# All extras
+all = [
+  "neuron-scanner[sagemaker,dev,mcp]",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["neuron_scanner*"]
+
