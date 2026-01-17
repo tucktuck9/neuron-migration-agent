@@ -174,3 +174,7 @@ INTERNAL-README.md
 INTERNAL-VALIDATE-MODEL.md
 INTERNAL-WIP-README.md
 INTERNAL-HOW-VALIDATE-MODEL.md
+
+# WIP tools
+/neuron_scanner/wip-cli.py
+/neuron_scanner/wip-mcp-server.py
