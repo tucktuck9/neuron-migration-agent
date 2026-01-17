@@ -152,7 +152,6 @@ model.tar.gz
 # WIP tools
 /neuron_scanner/application/
 /neuron_scanner/core/
-/neuron_scanner/helpers/
 /neuron_scanner/kubernetes/
 /neuron_scanner/steering/
 /neuron_scanner/tests/
