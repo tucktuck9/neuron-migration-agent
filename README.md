@@ -213,6 +213,16 @@ If auto-detection fails or you need to test a specific sequence length (e.g., ba
 neuron-scanner validate-model s3://your-bucket/model.tar.gz --input-shape 1,256
 ```
 
+If you prefer to use flags instead of environment variables, use command-line options. Use `--model` to specify the S3 location of your model artifact (e.g., `s3://bucket/path/model.tar.gz`), `--output-bucket` for the bucket name where compilation artifacts are stored, and `--role-arn` for the IAM role.
+
+```bash
+neuron-scanner validate-model --model s3://my-neuron-testing-bucket/models/model.tar.gz \
+  --output-bucket my-neuron-testing-bucket \
+  --instance-type ml.trn1.2xlarge \
+  --region us-east-1 \
+  --role-arn arn:aws:iam::01234567890:role/NeuronValidationRole
+```
+
 ## 💻 Setup Claude Code CLI
 
 If using the Claude Desktop app, Claude Code CLI is required to view and access code on your local machine.
