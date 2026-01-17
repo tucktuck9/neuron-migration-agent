@@ -54,7 +54,8 @@ def create_mcp_server():
     @mcp.tool()
     async def validate_model(
         s3_uri: str,
-        instance_type: Optional[str] = None
+        instance_type: Optional[str] = None,
+        retain_instance: bool = False,
     ) -> str:
         """
         Start an async SageMaker Neuron validation job (returns immediately).
@@ -75,6 +76,8 @@ def create_mcp_server():
                    (e.g., "s3://my-bucket/models/bert-base.tar.gz")
             instance_type: Optional instance type override
                           (e.g., "ml.inf2.xlarge", "ml.trn1.2xlarge")
+            retain_instance: Retain notebook instance after compilation (default: False)
+                            Useful for debugging or running additional experiments
         
         Returns:
             Job ID and instructions for checking status.
@@ -85,15 +88,17 @@ def create_mcp_server():
             2. Downloads your model from S3
             3. Runs torch_neuronx.trace() to compile for Neuron
             4. Uploads results to S3
-            5. Cleans up the notebook instance
+            5. Cleans up the notebook instance (unless retain_instance=True)
         
         Example:
             validate_model("s3://my-bucket/models/my-model.tar.gz")
+            validate_model("s3://my-bucket/models/my-model.tar.gz", retain_instance=True)
         """
         try:
             job_id = model_service.start_async_validation(
                 s3_uri=s3_uri,
                 instance_type=instance_type,
+                retain_instance=retain_instance,
             )
             return (
                 f"✅ **Validation Job Started**\n\n"
@@ -108,7 +113,8 @@ def create_mcp_server():
                 f"The job will:\n"
                 f"1. Create a SageMaker Notebook Instance (~2-3 min)\n"
                 f"2. Run Neuron compilation (~2-5 min)\n"
-                f"3. Upload results and cleanup (~1 min)"
+                f"3. Upload results and cleanup (~1 min)\n\n"
+                f"{'⚠️ Instance will be retained for debugging (retain_instance=True)' if retain_instance else ''}"
             )
         except Exception as e:
             return f"❌ Failed to start validation: {str(e)}"

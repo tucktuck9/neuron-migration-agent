@@ -391,6 +391,7 @@ class ModelValidationService:
         input_shape: Optional[Tuple[int, ...]] = None,
         model_name: Optional[str] = None,
         instance_type: Optional[str] = None,
+        retain_instance: bool = False,
     ) -> str:
         """
         Validate a model in S3 using SageMaker Notebook Instance.
@@ -406,12 +407,13 @@ class ModelValidationService:
             input_shape: Optional input tensor shape (auto-detected if not provided)
             model_name: Display name for the model (extracted from URI if not provided)
             instance_type: Optional SageMaker instance type override
+            retain_instance: Retain notebook instance after compilation (default: False)
         
         Returns:
             Formatted validation report
         """
         try:
-            result = self._run_s3_validation(s3_uri, input_shape, model_name, instance_type)
+            result = self._run_s3_validation(s3_uri, input_shape, model_name, instance_type, retain_instance)
             return self._sagemaker_formatter.format([result])
         except Exception as e:
             logger.error(f"Error in SageMaker validation: {e}")
@@ -458,6 +460,7 @@ class ModelValidationService:
         input_shape: Optional[Tuple[int, ...]] = None,
         model_name: Optional[str] = None,
         instance_type: Optional[str] = None,
+        retain_instance: bool = False,
     ) -> ValidationResult:
         """
         Run Neuron validation via SageMaker Notebook Instance for an S3 model.
@@ -471,6 +474,7 @@ class ModelValidationService:
             input_shape: Optional input tensor shape (auto-detected from config.json)
             model_name: Display name for the model
             instance_type: Optional SageMaker instance type override
+            retain_instance: Retain notebook instance after compilation (default: False)
             
         Returns:
             ValidationResult with compatibility status
@@ -512,6 +516,7 @@ class ModelValidationService:
                 model_name=model_name,
                 input_shape=input_shape,
                 instance_type_override=instance_type,
+                retain_instance=retain_instance,
             )
             
             # Convert SageMaker result to our ValidationResult
@@ -550,6 +555,7 @@ class ModelValidationService:
         s3_uri: str,
         input_shape: Optional[Tuple[int, ...]] = None,
         instance_type: Optional[str] = None,
+        retain_instance: bool = False,
     ) -> str:
         """
         Start an async SageMaker validation job.
@@ -561,6 +567,7 @@ class ModelValidationService:
             s3_uri: S3 URI to model.tar.gz
             input_shape: Optional input shape override
             instance_type: Optional instance type override
+            retain_instance: Retain notebook instance after compilation (default: False)
         
         Returns:
             job_id for tracking
@@ -571,6 +578,7 @@ class ModelValidationService:
             validation_func=self._run_s3_validation,
             input_shape=input_shape,
             instance_type=instance_type,
+            retain_instance=retain_instance,
         )
         return job_id
 

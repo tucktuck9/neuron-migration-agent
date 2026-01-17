@@ -223,6 +223,13 @@ neuron-scanner validate-model --model s3://my-neuron-testing-bucket/models/model
   --role-arn arn:aws:iam::01234567890:role/NeuronValidationRole
 ```
 
+To retain the notebook instance after compilation for debugging or additional experiments, use `--retain-instance`. Note that you are responsible for manually deleting the instance to avoid ongoing costs (~$1.30/hour for ml.inf2.xlarge).
+
+```bash
+# Retain notebook instance for debugging or additional experiments
+neuron-scanner validate-model s3://your-bucket/model.tar.gz --retain-instance
+```
+
 ## 💻 Setup Claude Code CLI
 
 If using the Claude Desktop app, Claude Code CLI is required to view and access code on your local machine.

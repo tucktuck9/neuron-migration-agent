@@ -267,6 +267,7 @@ class SageMakerNeuronValidator:
         input_shape: Optional[Tuple[int, ...]] = None,
         timeout_seconds: int = 1800,
         instance_type_override: Optional[str] = None,
+        retain_instance: bool = False,
     ) -> SageMakerValidationResult:
         """
         Validate a model already in S3 using SageMaker Notebook Instance.
@@ -277,6 +278,7 @@ class SageMakerNeuronValidator:
             input_shape: Optional input tensor shape (auto-detected if not provided)
             timeout_seconds: Max time to wait for compilation (default 30 min)
             instance_type_override: Override the default instance type
+            retain_instance: Retain notebook instance after compilation (default: False)
             
         Returns:
             SageMakerValidationResult with compatibility status
@@ -371,8 +373,15 @@ class SageMakerNeuronValidator:
             )
         finally:
             # Clean up resources
-            self._cleanup_notebook_instance(notebook_name)
-            self._cleanup_lifecycle_config(lifecycle_config_name)
+            if not retain_instance:
+                self._cleanup_notebook_instance(notebook_name)
+                self._cleanup_lifecycle_config(lifecycle_config_name)
+            else:
+                logger.info(f"Retaining notebook instance: {notebook_name}")
+                logger.info(f"Access at: https://console.aws.amazon.com/sagemaker/home?region={self.region}#/notebook-instances/{notebook_name}")
+                _progress_console.print(f"\n[yellow]⚠️  Notebook instance retained: {notebook_name}[/yellow]")
+                _progress_console.print(f"[yellow]⚠️  Cost: ~$1.30/hour for ml.inf2.xlarge - remember to delete manually[/yellow]")
+                _progress_console.print(f"[dim]Access: https://console.aws.amazon.com/sagemaker/home?region={self.region}#/notebook-instances/{notebook_name}[/dim]")
     
     # -------------------------------------------------------------------------
     # Internal Methods - S3 Operations

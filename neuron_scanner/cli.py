@@ -120,6 +120,11 @@ def main(
     default=None,
     help="Override SageMaker instance type for compilation",
 )
+@click.option(
+    "--retain-instance",
+    is_flag=True,
+    help="Retain the SageMaker notebook instance after compilation (for debugging). Default: instance is deleted.",
+)
 def validate_model(
     s3_uri: str | None,
     quiet: bool,
@@ -129,6 +134,7 @@ def validate_model(
     region: str | None,
     input_shape: str | None,
     instance_type: str | None,
+    retain_instance: bool,
 ):
     """
     Compile and validate model on AWS Neuron hardware using SageMaker.
@@ -185,6 +191,7 @@ def validate_model(
             s3_uri=model_uri,
             input_shape=parsed_shape,
             instance_type=instance_type,
+            retain_instance=retain_instance,
         )
         
         console.print(Markdown(output))
