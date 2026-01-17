@@ -33,8 +33,8 @@ Before you begin, complete these tasks:
 
 ```bash
 # 1. Clone and setup virtual environment
-git clone https://github.com/aws-samples/neuron-migrator.git
-cd neuron-migrator
+git clone https://github.com/tucktuck9/neuron-migration-agent.git
+cd neuron-migration-agent
 python3.11 -m venv neuron-env
 source neuron-env/bin/activate
 
@@ -234,10 +234,10 @@ When you setup the MCP server (neuron-scanner), it runs on your local machine wi
 {
   "mcpServers": {
     "neuron-scanner": {
-      "command": "/absolute/path/to/neuron-migrator/neuron-env/bin/python3",
-      "args": ["/absolute/path/to/neuron-migrator/neuron_scanner/mcp_server.py"],
+      "command": "/absolute/path/to/neuron-migration-agent/neuron-env/bin/python3",
+      "args": ["/absolute/path/to/neuron-migration-agent/neuron_scanner/mcp_server.py"],
       "env": {
-        "PYTHONPATH": "/absolute/path/to/neuron-migrator"
+        "PYTHONPATH": "/absolute/path/to/neuron-migration-agent"
       }
     }
   }
