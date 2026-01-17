@@ -41,7 +41,7 @@ def _apply_validate_model_env_overrides(
     Apply validate-model CLI flags as env vars for the SageMaker validator.
 
     ARCHITECTURE:
-        The recommendations validator uses Pydantic BaseSettings that reads env vars.
+        The model validation service uses Pydantic BaseSettings that reads env vars.
         CLI flags override env vars so users don't need to export variables manually.
     """
     if bucket is not None:
@@ -153,7 +153,7 @@ def validate_model(
         if quiet:
             logging.getLogger().setLevel(logging.ERROR)
         
-        from neuron_scanner.recommendations.service import ModelValidationService
+        from neuron_scanner.model_validation.service import ModelValidationService
         service = ModelValidationService()
         
         # Enforce S3 URI

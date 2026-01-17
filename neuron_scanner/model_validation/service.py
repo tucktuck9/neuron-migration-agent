@@ -24,11 +24,11 @@ from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field, computed_field
 
-from neuron_scanner.recommendations.display import (
+from neuron_scanner.model_validation.display import (
     SageMakerValidationDisplayFormatter,
 )
-from neuron_scanner.recommendations.template_engine import get_template_env
-from neuron_scanner.recommendations.types import ValidationResult, ValidationStatus
+from neuron_scanner.model_validation.template_engine import get_template_env
+from neuron_scanner.model_validation.types import ValidationResult, ValidationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -428,7 +428,7 @@ class ModelValidationService:
             or environment not configured.
         """
         try:
-            from neuron_scanner.recommendations.sagemaker_validator import (
+            from neuron_scanner.model_validation.sagemaker_validator import (
                 create_validator_from_env,
             )
             return create_validator_from_env()

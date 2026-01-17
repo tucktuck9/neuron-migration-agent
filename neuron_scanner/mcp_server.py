@@ -22,7 +22,7 @@ except Exception:
     except Exception:
         FastMCP = None
 
-from neuron_scanner.recommendations.service import ModelValidationService
+from neuron_scanner.model_validation.service import ModelValidationService
 from neuron_scanner.helpers.cli_utilities import (
     LoggingConfigurator,
     ServerRunner,

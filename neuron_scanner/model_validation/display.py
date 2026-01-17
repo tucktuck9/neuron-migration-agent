@@ -17,8 +17,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List
 
-from neuron_scanner.recommendations.types import ValidationResult, ValidationStatus
-from neuron_scanner.recommendations.template_engine import get_template_env
+from neuron_scanner.model_validation.types import ValidationResult, ValidationStatus
+from neuron_scanner.model_validation.template_engine import get_template_env
 
 logger = logging.getLogger(__name__)
 

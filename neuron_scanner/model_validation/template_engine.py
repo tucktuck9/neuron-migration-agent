@@ -1,5 +1,5 @@
 """
-Jinja2 template engine for recommendations module.
+Jinja2 template engine for model validation module.
 
 ARCHITECTURE:
     Centralized template loading and rendering.
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 @lru_cache(maxsize=1)
 def get_template_env() -> Environment:
     """
-    Get the Jinja2 environment for recommendations templates.
+    Get the Jinja2 environment for model validation templates.
     
     Returns:
         Configured Jinja2 Environment instance
