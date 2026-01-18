@@ -230,6 +230,12 @@ To retain the notebook instance after compilation for debugging or additional ex
 neuron-scanner validate-model s3://your-bucket/model.tar.gz --retain-instance
 ```
 
+When you use `--retain-instance`, view the resources using these links:
+
+**Via AWS Console:**
+- Go to [SageMaker Console → Notebook instances](https://console.aws.amazon.com/sagemaker/home#/notebook-instances)
+- Go to [CloudWatch Console → Log groups](https://console.aws.amazon.com/cloudwatch/home#logsV2:log-groups)
+
 ## 💻 Setup Claude Code CLI
 
 If using the Claude Desktop app, Claude Code CLI is required to view and access code on your local machine.
