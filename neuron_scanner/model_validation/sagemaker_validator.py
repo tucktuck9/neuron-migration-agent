@@ -252,6 +252,33 @@ class SageMakerNeuronValidator:
         self._console_template = self._env.get_template("console.j2")
         self._lifecycle_template = self._env.get_template("lifecycle_script.j2")
     
+    def _select_container_image(self, instance_type: str) -> str:
+        """
+        Select appropriate Neuron DLC image based on instance type.
+        
+        Uses SDK 2.27.1 containers from public ECR:
+        - Inference containers for Inferentia (ml.inf2.*)
+        - Training containers for Trainium (ml.trn1.*, ml.trn2.*)
+        
+        Args:
+            instance_type: SageMaker instance type (e.g., ml.inf2.xlarge, ml.trn1.2xlarge)
+        
+        Returns:
+            Full container image URI
+        """
+        # Extract instance family (inf2, trn1, trn2, etc.)
+        if instance_type.startswith("ml.trn"):
+            # Trainium instances use training containers
+            container_type = "training"
+            logger.info(f"Using training container for Trainium instance: {instance_type}")
+        else:
+            # Inferentia and default use inference containers
+            container_type = "inference"
+            logger.info(f"Using inference container for Inferentia instance: {instance_type}")
+        
+        container_image = f"public.ecr.aws/neuron/pytorch-{container_type}-neuronx:2.9.0-neuronx-py312-sdk2.27.1-ubuntu24.04"
+        return container_image
+    
     def _render_console(self, section: str, **kwargs) -> str:
         """Render console message from template."""
         return self._console_template.render(section=section, **kwargs).strip()
@@ -332,6 +359,7 @@ class SageMakerNeuronValidator:
                 model_s3_uri=s3_uri,
                 script_s3_uri=script_s3_uri,
                 output_s3_uri=f"s3://{self.output_bucket}/{output_prefix}",
+                instance_type=instance_type,
                 input_shape=input_shape,
             )
             
@@ -426,14 +454,16 @@ class SageMakerNeuronValidator:
         model_s3_uri: str,
         script_s3_uri: str,
         output_s3_uri: str,
+        instance_type: str,
         input_shape: Optional[Tuple[int, ...]] = None,
     ) -> None:
-        """Create a lifecycle configuration for the notebook instance."""
-        
+        """Create a lifecycle configuration for the notebook instance.""" 
+
         # Prepare template variables
         input_shape_str = ",".join(str(dim) for dim in input_shape) if input_shape else ""
-        container_registry = f"763104351884.dkr.ecr.{self.region}.amazonaws.com"
-        container_image = f"{container_registry}/pytorch-training-neuronx:2.8.0-neuronx-py311-sdk2.26.0-ubuntu22.04"
+        
+        # Select appropriate container based on instance type
+        container_image = self._select_container_image(instance_type)
         
         # Render lifecycle script from Jinja2 template
         on_start_script = self._lifecycle_template.render(
@@ -442,7 +472,6 @@ class SageMakerNeuronValidator:
             script_s3_uri=script_s3_uri,
             input_shape_str=input_shape_str,
             region=self.region,
-            container_registry=container_registry,
             container_image=container_image,
         )
         
@@ -489,16 +518,25 @@ class SageMakerNeuronValidator:
     ) -> None:
         """Create a SageMaker Notebook Instance."""
         
+        # Use larger volume for Trainium (training containers are 20-30 GB)
+        # Inference containers are smaller (~5-10 GB) so 50 GB is fine
+        if instance_type.startswith("ml.trn"):
+            volume_size = 100  # Training: larger containers
+            logger.info(f"Using 100 GB EBS volume for Trainium training instance")
+        else:
+            volume_size = 50   # Inference: smaller containers
+            logger.info(f"Using 50 GB EBS volume for Inferentia inference instance")
+        
         self.sagemaker_client.create_notebook_instance(
             NotebookInstanceName=notebook_name,
             InstanceType=instance_type,
             RoleArn=self.role_arn,
-            VolumeSizeInGB=50,
+            VolumeSizeInGB=volume_size,
             LifecycleConfigName=lifecycle_config_name,
             DirectInternetAccess='Enabled',
             RootAccess='Enabled',
         )
-        logger.info(f"Created notebook instance: {notebook_name} ({instance_type})")
+        logger.info(f"Created notebook instance: {notebook_name} ({instance_type}, {volume_size} GB EBS)")
     
     def _wait_for_notebook_status(
         self,
