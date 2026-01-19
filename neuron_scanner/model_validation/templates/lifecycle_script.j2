@@ -12,6 +12,7 @@ VARIABLES:
     input_shape_str: Comma-separated input shape (e.g., "1,512") or empty for auto-detect
     region: AWS region
     container_image: Full Neuron DLC image URI from public ECR
+    neuron_sdk_version: Neuron SDK version (e.g., "2.27.1") extracted from container_image
 #}
 #!/bin/bash
 set -e
@@ -101,12 +102,119 @@ docker run --rm \
     exit 1
 }
 
+echo "✅ Docker compilation complete"
+
+# =============================================================================
+# Validate Model Load in Docker (Same Environment)
+# =============================================================================
+echo ""
+echo "🧪 Testing model load in Docker container..."
+
+# Discover Neuron devices on the host
+echo "Discovering Neuron devices..."
+NEURON_DEVICES=""
+for dev in /dev/neuron*; do
+    if [ -e "$dev" ]; then
+        NEURON_DEVICES="$NEURON_DEVICES --device=$dev"
+        echo "  Found: $dev"
+    fi
+done
+
+if [ -z "$NEURON_DEVICES" ]; then
+    echo "⚠️  Warning: No Neuron devices found. Model load test may fail."
+    echo "  This is expected if not running on an Inferentia/Trainium instance."
+fi
+
+docker run --rm \
+    $NEURON_DEVICES \
+    -v /tmp/neuron-compile:/app \
+    {{ container_image }} \
+    /bin/bash -c "
+python3 << 'LOADTEST'
+import torch
+import torch_neuronx
+import json
+import sys
+
+print(f'Using torch-neuronx: {torch_neuronx.__version__}')
+
+try:
+    model_path = '/app/output/compiled_model.pt'
+    print(f'Loading model from: {model_path}')
+    
+    compiled_model = torch.jit.load(model_path)
+    
+    result = {
+        'status': 'COMPATIBLE',
+        'message': 'Model compiled and loaded successfully',
+        'torch_neuronx_version': torch_neuronx.__version__,
+        'pytorch_version': torch.__version__,
+        'environment': 'Docker Neuron DLC'
+    }
+    print(f\"✅ {result['message']}\")
+    
+except Exception as e:
+    result = {
+        'status': 'ERROR',
+        'error': str(e),
+        'torch_neuronx_version': torch_neuronx.__version__,
+        'pytorch_version': torch.__version__
+    }
+    print(f'❌ Load test failed: {e}')
+    sys.exit(1)
+
+# Save result
+with open('/app/output/result.json', 'w') as f:
+    json.dump(result, f, indent=2)
+LOADTEST
+" || {
+    echo '{"status": "ERROR", "error": "Model load validation failed"}' > /tmp/neuron-compile/output/result.json
+}
+
+echo "✅ Model validation complete"
+
 # =============================================================================
 # Upload Results
 # =============================================================================
+echo ""
+echo "📤 Uploading results to S3..."
 aws s3 cp /tmp/neuron-compile/output/result.json "$OUTPUT_S3_URI/result.json"
 if [ -f /tmp/neuron-compile/output/compiled_model.pt ]; then
     aws s3 cp /tmp/neuron-compile/output/compiled_model.pt "$OUTPUT_S3_URI/compiled_model.pt"
 fi
 
-echo "Compilation complete!"
+# Upload compilation logs if they exist
+if [ -f /tmp/neuron-compile/output/log-neuron-cc.txt ]; then
+    aws s3 cp /tmp/neuron-compile/output/log-neuron-cc.txt "$OUTPUT_S3_URI/log-neuron-cc.txt"
+fi
+
+echo ""
+echo "=============================================="
+echo "✅ NEURON VALIDATION COMPLETE"
+echo "=============================================="
+echo ""
+echo "📊 Results uploaded to: $OUTPUT_S3_URI"
+echo ""
+echo "🎯 To use the compiled model:"
+echo ""
+echo "   Option 1: Run in Docker (Recommended - matches compilation environment)"
+echo "   ---------------------------------------------------------------"
+echo "   docker run -it --rm -v /tmp/neuron-compile:/app \\"
+echo "     {{ container_image }} bash"
+echo ""
+echo "   Then in Docker:"
+echo "   >>> python3"
+echo "   >>> import torch"
+echo "   >>> model = torch.jit.load('/app/output/compiled_model.pt')"
+echo "   >>> print('Model loaded successfully!')"
+echo ""
+echo "   Option 2: Copy to your own environment"
+echo "   ---------------------------------------------------------------"
+echo "   Requires: PyTorch 2.9.0 + torch-neuronx {{ neuron_sdk_version }}"
+echo "   Model location: /tmp/neuron-compile/output/compiled_model.pt"
+echo ""
+echo "📚 Compilation Environment:"
+echo "   - Docker Image: {{ container_image }}"
+echo "   - PyTorch: 2.9.0"
+echo "   - Neuron SDK: {{ neuron_sdk_version }}"
+echo ""

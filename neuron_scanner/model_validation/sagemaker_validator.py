@@ -279,6 +279,28 @@ class SageMakerNeuronValidator:
         container_image = f"public.ecr.aws/neuron/pytorch-{container_type}-neuronx:2.9.0-neuronx-py312-sdk2.27.1-ubuntu24.04"
         return container_image
     
+    def _extract_sdk_version(self, container_image: str) -> str:
+        """
+        Extract Neuron SDK version from container image tag.
+        
+        Container image format: ...:2.9.0-neuronx-py312-sdk2.27.1-ubuntu24.04
+        Extracts: 2.27.1
+        
+        Args:
+            container_image: Full container image URI
+        
+        Returns:
+            SDK version string (e.g., "2.27.1")
+        """
+        import re
+        # Match pattern: sdk<VERSION> where VERSION is digits and dots
+        match = re.search(r'sdk(\d+\.\d+\.\d+)', container_image)
+        if match:
+            return match.group(1)
+        # Fallback to default if pattern not found
+        logger.warning(f"Could not extract SDK version from {container_image}, using default 2.27.1")
+        return "2.27.1"
+    
     def _render_console(self, section: str, **kwargs) -> str:
         """Render console message from template."""
         return self._console_template.render(section=section, **kwargs).strip()
@@ -465,6 +487,9 @@ class SageMakerNeuronValidator:
         # Select appropriate container based on instance type
         container_image = self._select_container_image(instance_type)
         
+        # Extract SDK version from container image for Jupyter environment upgrade
+        neuron_sdk_version = self._extract_sdk_version(container_image)
+        
         # Render lifecycle script from Jinja2 template
         on_start_script = self._lifecycle_template.render(
             model_s3_uri=model_s3_uri,
@@ -473,6 +498,7 @@ class SageMakerNeuronValidator:
             input_shape_str=input_shape_str,
             region=self.region,
             container_image=container_image,
+            neuron_sdk_version=neuron_sdk_version,
         )
         
         # Base64 encode the script (required by SageMaker)
