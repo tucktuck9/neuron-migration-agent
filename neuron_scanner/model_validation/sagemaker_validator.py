@@ -314,7 +314,7 @@ class SageMakerNeuronValidator:
         s3_uri: str,
         model_name: Optional[str] = None,
         input_shape: Optional[Tuple[int, ...]] = None,
-        timeout_seconds: int = 1800,
+        timeout_seconds: int = 3600,
         instance_type_override: Optional[str] = None,
         retain_instance: bool = False,
     ) -> SageMakerValidationResult:
@@ -325,7 +325,7 @@ class SageMakerNeuronValidator:
             s3_uri: S3 URI to model.tar.gz (e.g., s3://bucket/path/model.tar.gz)
             model_name: Name for logging (extracted from URI if not provided)
             input_shape: Optional input tensor shape (auto-detected if not provided)
-            timeout_seconds: Max time to wait for compilation (default 30 min)
+            timeout_seconds: Max time to wait for compilation (default 60 min)
             instance_type_override: Override the default instance type
             retain_instance: Retain notebook instance after compilation (default: False)
             
@@ -393,9 +393,9 @@ class SageMakerNeuronValidator:
                 lifecycle_config_name=lifecycle_config_name,
             )
             
-            # Wait for notebook to reach InService status
+            # Wait for notebook to reach InService status (allow 30 min for lifecycle script)
             _progress_console.print(self._render_console("wait_start"))
-            self._wait_for_notebook_status(notebook_name, "InService", timeout_seconds // 2)
+            self._wait_for_notebook_status(notebook_name, "InService", timeout_seconds=1800)
             
             # Poll S3 for result.json
             _progress_console.print(self._render_console("wait_results"))
