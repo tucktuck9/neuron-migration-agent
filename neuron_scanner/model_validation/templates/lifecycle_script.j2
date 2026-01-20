@@ -135,6 +135,7 @@ import torch
 import torch_neuronx
 import json
 import sys
+import subprocess
 
 print(f'Using torch-neuronx: {torch_neuronx.__version__}')
 
@@ -168,7 +169,8 @@ with open('/app/output/result.json', 'w') as f:
     json.dump(result, f, indent=2)
 LOADTEST
 " || {
-    echo '{"status": "ERROR", "error": "Model load validation failed"}' > /tmp/neuron-compile/output/result.json
+    # Capture the output of the failed python script (which printed to stdout/stderr)
+    echo '{"status": "ERROR", "error": "Model load validation failed. Check CloudWatch logs for python output."}' > /tmp/neuron-compile/output/result.json
 }
 
 echo "✅ Model validation complete"
@@ -196,6 +198,13 @@ cat <<EOF > "$LAUNCHER_PATH"
 #!/bin/bash
 # Capture the connection file path passed by Jupyter
 CONNECTION_FILE="\$1"
+
+# -----------------------------------------------------------------------------
+# RESOURCE LOCKING: Ensure exclusive access to Neuron devices
+# -----------------------------------------------------------------------------
+# Kill any existing containers using this image to free up /dev/neuron* devices.
+# This fixes "Logical Neuron Core(s) not available" errors when restarting kernels.
+docker ps -q --filter ancestor={{ container_image }} | xargs -r docker kill
 
 # Run the container with:
 # - --net=host: To allow connection to Jupyter ports
